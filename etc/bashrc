@@ -1,0 +1,594 @@
+#################################################################################################################
+#  File: bashrc
+#  Usado como bashrc compartilhado entre diferentes computadores - Jovani L. Favero
+#  Last Update: 11 Outubro 2010 
+#################################################################################################################
+
+#Adicionando diretorio atual, Bin e bin para poder usar diretamente os executaveis
+PATH=./:$PATH
+PATH=~/Bin:$PATH
+PATH=~/bin:$PATH
+export PATH
+
+
+# listando arquivos, com cores e com diferentes 
+alias ls='ls --color=auto' 
+alias l='ls -F'
+alias ll='ls -lh' 
+alias la='ls -lha'
+alias ldir='ls -p | grep \/'
+alias lm='ls -al |more'		# pipe through 'more'
+alias tree='tree -Cs'		# nice alternative to 'ls'
+ 
+# Um diretório acima
+   alias ..='cd ..' 
+# Dois diretórios acima
+   alias ...='cd ../../'
+# Três diretórios acima
+   alias ....='cd ../../../'
+# Quatro diretórios acima
+   alias .....='cd ../../../../'
+# Cinco diretórios acima
+   alias ......='cd ../../../../../'
+
+# Remove arquivos terminados com ~ (típico arquivo de backup)
+   alias tilremove="find ./ -maxdepth 1 -type f -iname \*~ -exec rm -v '{}' \;"
+
+# Montar imagem de cd/dvd
+alias miso='sudo mount -t iso9660 -o ro,loop'
+
+# Atalhos uteis
+alias t='cd /home/jovani/Dropbox/Work/Latex/'
+alias W='cd /home/jovani/Dropbox/Work/'
+alias bakremove="find ./ -maxdepth 1 -type f -iname \*bak -exec rm -v '{}' \;"
+
+# Tornar executavel
+alias mexe='chmod +x $1'
+
+# copiar diretorio
+alias cpr='cp -r'
+alias rmr='rm -rf'
+alias d='cd /home/jovani/Dropbox'
+alias dtemp='cd /home/jovani/Dropbox/Temp'
+alias h='cd /home/jovani'
+alias b='cd -'
+alias path='echo -e ${PATH//:/\\n}'
+alias ln='ln -s'
+alias dfh='df -h'
+alias count='wc -l'
+alias q='exit'
+alias top='htop'
+alias toptop='top'
+
+# Facilitar trabalho com tail
+alias tl='tail -f $1'
+alias ta='tail -500 $1'
+
+function cuttail() # cut last n lines in file, 10 by default
+{
+    nlines=${2:-10}
+    sed -n -e :a -e "1,${nlines}!{P;N;D;};N;ba" $1
+}
+
+
+# Facilitar matar programa
+alias psgrep2='ps -aux | grep -i $1'
+alias killit='kill -9 $1'
+
+#-----------------------------------
+# Process/system related functions:
+#-----------------------------------
+
+function my_ps() { ps $@ -u $USER -o pid,%cpu,%mem,bsdtime,command ; }
+function pp() { my_ps f | awk '!/awk/ && $0~var' var=${1:-".*"} ; }
+
+# This function is roughly the same as 'killall' on linux
+# but has no equivalent (that I know of) on Solaris
+function killps()   # kill by process name
+{
+    local pid pname sig="-TERM"   # default signal
+    if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then 
+	echo "Usage: killps [-SIGNAL] pattern"
+	return;
+    fi
+    if [ $# = 2 ]; then sig=$1 ; fi
+    for pid in $(my_ps| awk '!/awk/ && $0~pat { print $1 }' pat=${!#} ) ; do
+	pname=$(my_ps | awk '$1~var { print $5 }' var=$pid )
+	if ask "Kill process $pid <$pname> with signal $sig?"
+	    then kill $sig $pid
+	fi
+    done
+}
+
+
+# Misc utilities:
+
+function repeat()       # repeat n times command
+{
+    local i max
+    max=$1; shift;
+    for ((i=1; i <= max ; i++)); do  # --> C-like syntax
+        eval "$@";
+    done
+}
+
+# usado na funcao acima killps
+function ask()
+{
+    echo -n "$@" '[y/n] ' ; read ans
+    case "$ans" in
+        y*|Y*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+#aliases
+alias dbashrc='(gedit ~/Dropbox/Configurar/etc/bashrc &)'
+alias bashrc='(gedit ~/.bashrc &)'
+alias ub='. ~/.bashrc'
+
+#apt
+alias install='sudo apt-get install'
+alias remove='sudo apt-get remove'
+alias purge='sudo apt-get remove --purge'
+alias update='sudo apt-get update'
+alias updateUpgrade='sudo apt-get update && sudo apt-get upgrade'
+alias upgrade='sudo apt-get upgrade'
+alias clean='sudo apt-get autoclean && sudo apt-get autoremove'
+alias search='apt-cache search'
+alias show='apt-cache show'
+alias sources='(gksudo gedit /etc/apt/sources.list &)'
+
+
+#lynx 
+alias lynx='(lynx -accept_all_cookies http://google.com)'
+
+psgrep() {
+	if [ ! -z $1 ] ; then
+		echo "Grepping for processes matching $1..."
+		ps aux | grep $1 | grep -v grep
+	else
+		echo "!! Need name to grep for"
+	fi
+}
+
+function my_ip() # get IP adresses
+{
+    MY_IP=$(/sbin/ifconfig ppp0 | awk '/inet/ { print $2 } ' | sed -e s/addr://)
+    MY_ISP=$(/sbin/ifconfig ppp0 | awk '/P-t-P/ { print $3 } ' | sed -e s/P-t-P://)
+}
+
+function ii()   # get current host related info
+{
+    echo -e "\nYou are logged on ${RED}$HOST"
+    echo -e "\nAdditionnal information:$NC " ; uname -a
+    echo -e "\n${RED}Users logged on:$NC " ; w -h
+    echo -e "\n${RED}Current date :$NC " ; date
+    echo -e "\n${RED}Machine stats :$NC " ; uptime
+    echo -e "\n${RED}Memory stats :$NC " ; free
+    my_ip 2>&- ;
+    echo -e "\n${RED}Local IP Address :$NC" ; echo ${MY_IP:-"Not connected"}
+    echo -e "\n${RED}ISP Address :$NC" ; echo ${MY_ISP:-"Not connected"}
+    echo
+}
+
+
+#-------------------------------------------------------------------------------
+# Funções (em forma de alias) para compactação
+#-------------------------------------------------------------------------------
+# Uso geral: nome <arquivofinal.compactado> [arquivos/diretórios de origem] 
+#-------------------------------------------------------------------------------
+  alias tartar="tar cvf"      # compacta formato .tar
+  alias targz="tar zcvf"      # compacta formato .tar.gz
+  alias tarbz2="tar jcvf"     # compacta formato .tar.bz2
+  alias zipe='zip -re'        # Zipa recursivamente com encriptação
+  alias zip='zip -r'          # Zipa recursivamente
+
+function extract()      # Handy Extract Program.
+{
+     if [ -f $1 ] ; then
+         case $1 in
+             *.tar.bz2)   tar xvjf $1     ;; 
+             *.tar.gz)    tar xvzf $1     ;;
+             *.gtgz)      tar xzf $1      ;;
+             *.bz2)       bunzip2 $1      ;;
+             *.rar)       unrar x $1      ;;
+             *.gz)        gunzip $1       ;;
+             *.tar)       tar xvf $1      ;;
+             *.tbz2)      tar xvjf $1     ;;
+             *.tgz)       tar xvzf $1     ;;
+             *.zip)       unzip $1        ;;
+             *.Z)         uncompress $1   ;;
+             *.7z)        7z x $1         ;;
+             *)           echo "'$1' cannot be extracted via >extract<" ;;
+         esac
+     else
+         echo "'$1' is not a valid file"
+     fi
+}
+
+############################## ##################################
+# ##### PROMPT SECTION ##### ####################################
+############################## ##################################
+
+# Define a few Colours
+BLACK='\e[0;30m'
+BLUE='\e[0;34m'
+GREEN='\e[0;32m'
+CYAN='\e[0;36m'
+RED='\e[0;31m'
+PURPLE='\e[0;35m'
+BROWN='\e[0;33m'
+LIGHTGRAY='\e[0;37m'
+DARKGRAY='\e[1;30m'
+LIGHTBLUE='\e[1;34m'
+LIGHTGREEN='\e[1;32m'
+LIGHTCYAN='\e[1;36m'
+LIGHTRED='\e[1;31m'
+LIGHTPURPLE='\e[1;35m'
+YELLOW='\e[1;33m'
+WHITE='\e[1;37m'
+NC='\e[0m' # No Color
+
+# WELCOME SCREEN
+################################################## #####
+
+#clear
+
+echo -ne "${LIGHTGREEN}" "Hello, $USER. Have a nice day. Today is, "; date
+echo -e "${WHITE}"; cal ; 
+echo -ne "${CYAN}";
+echo -ne "${LIGHTPURPLE}Sysinfo:";uptime ;echo ""
+
+
+# color_name='\[\033[ color_code m\]'
+
+rgb_restore='\[\033[00m\]'
+rgb_black='\[\033[00;30m\]'
+rgb_firebrick='\[\033[00;31m\]'
+rgb_red='\[\033[01;31m\]'
+rgb_forest='\[\033[00;32m\]'
+rgb_green='\[\033[01;32m\]'
+rgb_brown='\[\033[00;33m\]'
+rgb_yellow='\[\033[01;33m\]'
+rgb_navy='\[\033[00;34m\]'
+rgb_blue='\[\033[01;34m\]'
+rgb_purple='\[\033[00;35m\]'
+rgb_magenta='\[\033[01;35m\]'
+rgb_cadet='\[\033[00;36m\]'
+rgb_cyan='\[\033[01;36m\]'
+rgb_gray='\[\033[00;37m\]'
+rgb_white='\[\033[01;37m\]'
+
+rgb_std="${rgb_white}"
+
+if [ `id -u` -eq 0 ]
+then
+    rgb_usr="${rgb_red}"
+else
+    rgb_usr="${rgb_green}"
+fi
+
+[ -n "$PS1" ] && PS1="${rgb_usr}`whoami`${rgb_std} \W ${rgb_usr}\\\$${rgb_restore} "
+
+unset   rgb_restore   \
+        rgb_black     \
+        rgb_firebrick \
+        rgb_red       \
+        rgb_forest    \
+        rgb_green     \
+        rgb_brown     \
+        rgb_yellow    \
+        rgb_navy      \
+        rgb_blue      \
+        rgb_purple    \
+        rgb_magenta   \
+        rgb_cadet     \
+        rgb_cyan      \
+        rgb_gray      \
+        rgb_white     \
+        rgb_std       \
+        rgb_usr
+
+
+
+export LS_COLORS=$LS_COLORS:"*.wmv=01;35":"*.wma=01;35":"*.flv=01;35":"*.m4a=01;35"
+
+
+#Outro tipo de terminal, mostra caminho completo do diretorio
+# Prompt
+BGREEN='\[\033[1;32m\]'
+GREEN='\[\033[0;32m\]'
+BRED='\[\033[1;31m\]'
+RED='\[\033[0;31m\]'
+BBLUE='\[\033[1;34m\]'
+BLUE='\[\033[0;34m\]'
+NORMAL='\[\033[00m\]'
+
+#PS1="${BLUE}(${RED}\w${BLUE}) ${NORMAL}\h ${RED}\$ ${NORMAL}"
+
+
+#---------------
+# Shell prompt
+#---------------
+
+function fastprompt()
+{
+    unset PROMPT_COMMAND
+    case $TERM in
+        *term | rxvt )
+            PS1="[\h] \W > \[\033]0;[\u@\h] \w\007\]" ;;
+        *)
+            PS1="[\h] \W > " ;;
+    esac
+}
+
+#coloca a hora de cada comando
+function powerprompt()
+{
+    _powerprompt()
+    {
+        LOAD=$(uptime|sed -e "s/.*: \([^,]*\).*/\1/" -e "s/ //g")
+        TIME=$(date +%H:%M)
+    }
+
+    PROMPT_COMMAND=_powerprompt
+    case $TERM in
+        *term | rxvt  )
+            PS1="${cyan}[\$TIME \$LOAD]$NC\n[\h \#] \W > \[\033]0;[\u@\h] \w\007\]" ;;
+        linux )
+            PS1="${cyan}[\$TIME - \$LOAD]$NC\n[\h \#] \w > " ;;
+        * )
+            PS1="[\$TIME - \$LOAD]\n[\h \#] \w > " ;;
+    esac
+}
+
+
+#-----------------------------------
+# File & strings related functions:
+#-----------------------------------
+
+function ff() { find . -name '*'$1'*' ; }                 # find a file
+function fe() { find . -name '*'$1'*' -exec $2 {} \; ; }  # find a file and run $2 on it 
+function fstr() # find a string in a set of files
+{
+    if [ "$#" -gt 2 ]; then
+        echo "Usage: fstr \"pattern\" [files] "
+        return;
+    fi
+    SMSO=$(tput smso)
+    RMSO=$(tput rmso)
+    find . -type f -name "${2:-*}" -print | xargs grep -sin "$1" | \
+sed "s/$1/$SMSO$1$RMSO/gI"
+}
+
+
+function lowercase()  # move filenames to lowercase
+{
+    for file ; do
+        filename=${file##*/}
+        case "$filename" in
+        */*) dirname==${file%/*} ;;
+        *) dirname=.;;
+        esac
+        nf=$(echo $filename | tr A-Z a-z)
+        newname="${dirname}/${nf}"
+        if [ "$nf" != "$filename" ]; then
+            mv "$file" "$newname"
+            echo "lowercase: $file --> $newname"
+        else
+            echo "lowercase: $file not changed."
+        fi
+    done
+}
+
+function upercase()  # move filenames to upercase
+{
+    for file ; do
+        filename=${file##*/}
+        case "$filename" in
+        */*) dirname==${file%/*} ;;
+        *) dirname=.;;
+        esac
+        nf=$(echo $filename | tr a-z A-Z )
+        newname="${dirname}/${nf}"
+        if [ "$nf" != "$filename" ]; then
+            mv "$file" "$newname"
+            echo "upercase: $file --> $newname"
+        else
+            echo "upercase: $file not changed."
+        fi
+    done
+}
+
+# pegar comandos dgitados errados e interpretar para o comando que seria o certo
+# spelling typos - highly personnal :-)
+alias xs='cd'
+alias vf='cd'
+alias moer='more'
+alias moew='more'
+alias kk='ll'
+
+
+#=========================================================================
+#
+# PROGRAMMABLE COMPLETION - ONLY SINCE BASH-2.04
+# (Most are taken from the bash 2.05 documentation)
+# You will in fact need bash-2.05 for some features
+#
+#=========================================================================
+
+if [ "${BASH_VERSION%.*}" \< "2.05" ]; then
+    echo "You will need to upgrade to version 2.05 for programmable completion"
+    return
+fi
+
+shopt -s extglob        # necessary
+set +o nounset		# otherwise some completions will fail
+
+complete -A hostname   rsh rcp telnet rlogin r ftp ping disk
+complete -A command    nohup exec eval trace gdb
+complete -A command    command type which
+complete -A export     printenv
+complete -A variable   export local readonly unset
+complete -A enabled    builtin
+complete -A alias      alias unalias
+complete -A function   function
+complete -A user       su mail finger
+
+complete -A helptopic  help     # currently same as builtins
+complete -A shopt      shopt
+complete -A stopped -P '%' bg
+complete -A job -P '%'     fg jobs disown
+
+complete -A directory  mkdir rmdir
+complete -A directory   -o default cd
+
+complete -f -d -X '*.gz'  gzip
+complete -f -d -X '*.bz2' bzip2
+complete -f -o default -X '!*.gz'  gunzip
+complete -f -o default -X '!*.bz2' bunzip2
+complete -f -o default -X '!*.pl'  perl perl5
+complete -f -o default -X '!*.ps'  gs ghostview ps2pdf ps2ascii
+complete -f -o default -X '!*.dvi' dvips dvipdf xdvi dviselect dvitype
+complete -f -o default -X '!*.pdf' acroread pdf2ps okular
+complete -f -o default -X '!*.+(pdf|ps|eps|dvi)' gv okular
+complete -f -o default -X '!*.texi*' makeinfo texi2dvi texi2html texi2pdf
+complete -f -o default -X '!*.tex' gedit tex latex slitex 
+complete -f -o default -X '!*.lyx' lyx 
+complete -f -o default -X '!*.+(jpg|gif|xpm|png|bmp)' xv gimp
+complete -f -o default -X '!*.mp3' mpg123 
+complete -f -o default -X '!*.ogg' ogg123 
+
+
+# This is a 'universal' completion function - it works when commands have
+# a so-called 'long options' mode , ie: 'ls --all' instead of 'ls -a' 
+_universal_func ()
+{
+    case "$2" in
+	-*)	;;
+	*)	return ;;
+    esac
+
+    case "$1" in
+	\~*)	eval cmd=$1 ;;
+	*)	cmd="$1" ;;
+    esac
+    COMPREPLY=( $("$cmd" --help | sed  -e '/--/!d' -e 's/.*--\([^ ]*\).*/--\1/'| \
+grep ^"$2" |sort -u) )
+}
+complete  -o default -F _universal_func ldd wget bash id info
+
+
+_make_targets ()
+{
+    local mdef makef gcmd cur prev i
+
+    COMPREPLY=()
+    cur=${COMP_WORDS[COMP_CWORD]}
+    prev=${COMP_WORDS[COMP_CWORD-1]}
+
+    # if prev argument is -f, return possible filename completions.
+    # we could be a little smarter here and return matches against
+    # `makefile Makefile *.mk', whatever exists
+    case "$prev" in
+        -*f)    COMPREPLY=( $(compgen -f $cur ) ); return 0;;
+    esac
+
+    # if we want an option, return the possible posix options
+    case "$cur" in
+        -)      COMPREPLY=(-e -f -i -k -n -p -q -r -S -s -t); return 0;;
+    esac
+
+    # make reads `makefile' before `Makefile'
+    if [ -f makefile ]; then
+        mdef=makefile
+    elif [ -f Makefile ]; then
+        mdef=Makefile
+    else
+        mdef=*.mk               # local convention
+    fi
+
+    # before we scan for targets, see if a makefile name was specified
+    # with -f
+    for (( i=0; i < ${#COMP_WORDS[@]}; i++ )); do
+        if [[ ${COMP_WORDS[i]} == -*f ]]; then
+            eval makef=${COMP_WORDS[i+1]}       # eval for tilde expansion
+            break
+        fi
+    done
+
+        [ -z "$makef" ] && makef=$mdef
+
+    # if we have a partial word to complete, restrict completions to
+    # matches of that word
+    if [ -n "$2" ]; then gcmd='grep "^$2"' ; else gcmd=cat ; fi
+
+    # if we don't want to use *.mk, we can take out the cat and use
+    # test -f $makef and input redirection
+    COMPREPLY=( $(cat $makef 2>/dev/null | awk 'BEGIN {FS=":"} /^[^.#   ][^=]*:/ {print $1}' | tr -s ' ' '\012' | sort -u | eval $gcmd ) )
+}
+
+complete -F _make_targets -X '+($*|*.[cho])' make gmake pmake
+
+_configure_func ()
+{
+    case "$2" in
+        -*)     ;;
+        *)      return ;;
+    esac
+
+    case "$1" in
+        \~*)    eval cmd=$1 ;;
+        *)      cmd="$1" ;;
+    esac
+
+    COMPREPLY=( $("$cmd" --help | awk '{if ($1 ~ /--.*/) print $1}' | grep ^"$2" | sort -u) )
+}
+
+complete -F _configure_func configure
+
+# cvs(1) completion
+_cvs ()
+{
+    local cur prev
+    COMPREPLY=()
+    cur=${COMP_WORDS[COMP_CWORD]}
+    prev=${COMP_WORDS[COMP_CWORD-1]}
+
+    if [ $COMP_CWORD -eq 1 ] || [ "${prev:0:1}" = "-" ]; then
+	COMPREPLY=( $( compgen -W 'add admin checkout commit diff \
+	export history import log rdiff release remove rtag status \
+	tag update' $cur ))
+    else
+	COMPREPLY=( $( compgen -f $cur ))
+    fi
+    return 0
+}
+complete -F _cvs cvs
+
+
+_killall ()
+{
+    local cur prev
+    COMPREPLY=()
+    cur=${COMP_WORDS[COMP_CWORD]}
+
+    # get a list of processes (the first sed evaluation
+    # takes care of swapped out processes, the second
+    # takes care of getting the basename of the process)
+    COMPREPLY=( $( /usr/bin/ps -u $USER -o comm  | \
+        sed -e '1,1d' -e 's#[]\[]##g' -e 's#^.*/##'| \
+        awk '{if ($0 ~ /^'$cur'/) print $0}' ))
+
+    return 0
+}
+
+complete -F _killall killall killps
+
+# acrescentei baseado em http://www.cfd-online.com/Forums/openfoam/70986-problem-openfoam-paraview-cavity-tutorial.html
+# realmente resolve o problema
+export LC_ALL=C   
+alias pf='paraFoam'
+
+##############################################################################################################
