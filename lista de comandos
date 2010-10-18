@@ -1,0 +1,46 @@
+#clonar um repo
+git clone git@github.com:joshuaflanagan/gitk-demo.git
+
+#abrir com gitk
+gitk --all
+
+#criar um novo branch
+git branch issue1
+
+#listar todos branch
+git branch
+
+#alternar entre branchs
+git checkout issue1
+
+#alternar entre branchs - volta para master
+git checkout master
+
+#acrescentar alguma coisa no branch corrente test2 e uma pasta neste caso
+git add test2/
+
+#fazer um commit no branch corrente
+git commit -am "My first commit"
+
+#apos ter feito as correcoes no branch issue1 pode-se querer atualizar no master
+git checkout master
+git merge issue1
+
+#deletar um branch
+git branch -d issue1
+
+#atualizar a partir do repo remoto, obter o ultimo estado do git repo do master
+git fetch origin
+
+# atualizar o master local
+git merge origin/master
+
+#atualizar no master
+git merge issue123
+
+#atualizar no master do repo
+git push origin master
+
+#para levar ao server um branch qualquer por exemplo src
+git push origin src
+
